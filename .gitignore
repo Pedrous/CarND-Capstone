@@ -2,6 +2,6 @@
 
 build
 devel
-linux_sys_int
+linux_sys_int/*
 
 profile.tmp
