@@ -100,6 +100,7 @@ class WaypointUpdater(object):
 			p.pose = wp.pose
 	
 			stop_idx = max(self.traffic_waypoint_idx - closest_idx - 2, 0)
+			#rospy.loginfo("stop_idx: %d, traffic_waypoint: %d, closest_idx: %d", stop_idx, self.traffic_waypoint_idx, closest_idx)
 			dist = self.distance(waypoints, i, stop_idx)
 			vel = math.sqrt(2*MAX_DECEL*dist)
 			if vel < 1.:
