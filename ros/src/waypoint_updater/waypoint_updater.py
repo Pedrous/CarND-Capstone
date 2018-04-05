@@ -108,7 +108,7 @@ class WaypointUpdater(object):
 			p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
 			temp.append(p)
 	
-			return p
+		return temp
 
 	def pose_cb(self, msg):
 		self.pose = msg
