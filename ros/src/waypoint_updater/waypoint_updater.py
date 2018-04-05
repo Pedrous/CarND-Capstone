@@ -35,7 +35,6 @@ class WaypointUpdater(object):
 
 		rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
 		rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-<<<<<<< HEAD
 		rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
 		self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -45,30 +44,13 @@ class WaypointUpdater(object):
 		self.waypoints_2d = None
 		self.waypoint_tree = None
 		self.traffic_waypoint_idx = -1
-=======
-
-		# TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-
-
-		self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
-
-		# TODO: Add other member variables you need below
-		self.pose = None
-		self.base_waypoints = None
-		self.waypoints_2d = None
-		self.waypoints_tree = None
->>>>>>> f6964534fb51803aacd00ef1624f19fee9133b05
 
 		self.loop()
 			
 	def loop(self):
 		rate = rospy.Rate(50)
 		while not rospy.is_shutdown():
-<<<<<<< HEAD
 			if self.pose and self.base_lane:
-=======
-			if self.pose and self.base_waypoints:
->>>>>>> f6964534fb51803aacd00ef1624f19fee9133b05
 				closest_waypoint_idx = self.get_closest_waypoint_idx()
 				self.publish_waypoints(closest_waypoint_idx)
 			rate.sleep()
@@ -91,7 +73,6 @@ class WaypointUpdater(object):
 
 		if val > 0:
 			closest_idx = (closest_idx + 1) % len(self.waypoints_2d)
-<<<<<<< HEAD
 
 		return closest_idx
 
@@ -128,42 +109,21 @@ class WaypointUpdater(object):
 			temp.append(p)
 	
 			return p
-=======
-		return closest_idx
-
-	def publish_waypoints(self, closest_idx):
-		lane = Lane()
-		lane.header = self.base_waypoints.header
-		lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
-		self.final_waypoints_pub.publish(lane)
->>>>>>> f6964534fb51803aacd00ef1624f19fee9133b05
 
 	def pose_cb(self, msg):
 		self.pose = msg
 
 	def waypoints_cb(self, waypoints):
-<<<<<<< HEAD
 		self.base_lane = waypoints
-=======
-		self.base_waypoints = waypoints
->>>>>>> f6964534fb51803aacd00ef1624f19fee9133b05
 		if not self.waypoints_2d:
 			self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]
 			self.waypoint_tree = KDTree(self.waypoints_2d)
 
 	def traffic_cb(self, msg):
-<<<<<<< HEAD
 		self.traffic_waypoint_idx = msg.data
 
 	def obstacle_cb(self, msg):
 		# TODO: Callback for /obstacle_waypoint message
-=======
-		# TODO: Callback for /traffic_waypoint message. Implement
-		pass
-
-	def obstacle_cb(self, msg):
-		# TODO: Callback for /obstacle_waypoint message. We will implement it later
->>>>>>> f6964534fb51803aacd00ef1624f19fee9133b05
 		pass
 
 	def get_waypoint_velocity(self, waypoint):
