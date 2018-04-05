@@ -93,8 +93,10 @@ class TLDetector(object):
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
+            #rospy.loginfo("elif")
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            #rospy.loginfo("else")
         self.state_count += 1
 
     def get_closest_waypoint(self, pose):
@@ -154,7 +156,7 @@ class TLDetector(object):
 
             #TODO find the closest visible traffic light (if one exists)
 
-            diff = len(slef.waypoints.waypoints)
+            diff = len(self.waypoints.waypoints)
             for i, light in enumerate(self.lights):
                 line = stop_line_positions[i]
                 line_pose = Pose()
