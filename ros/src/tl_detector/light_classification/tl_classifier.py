@@ -66,14 +66,12 @@ class TLClassifier(object):
         #print(img.shape)
         
         #t1 = time.time()
-        #pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
-        #logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
-        sess = tf.get_default_session()
-        logits = sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
+        pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
+        logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
+        
         print(logits)
         #print(time.time()-t1)
         
-        return 4
         if (pred == 3):
             pred = 4 # UNKNOWN
         

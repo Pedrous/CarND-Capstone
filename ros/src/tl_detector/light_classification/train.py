@@ -49,7 +49,7 @@ print("#unknowns: {}".format(len(unknown_img_paths)))
 from sklearn.model_selection import train_test_split
 train_imgs, test_imgs, train_labels, test_labels = train_test_split(imgs, labels, test_size = 0.2)
 
-EPOCHS = 5
+EPOCHS = 2
 BATCH_SIZE = 5
 
 def fire_module(x, num_filters_squeeze):
@@ -250,25 +250,6 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         num_examples = len(train_imgs)
-        
-        tensor_info_x = tf.saved_model.utils.build_tensor_info(x)
-        tensor_info_kp = tf.saved_model.utils.build_tensor_info(keep_prob)
-        tensor_info_pred = tf.saved_model.utils.build_tensor_info(prediction)
-        tensor_info_logits = tf.saved_model.utils.build_tensor_info(logits)
-
-        prediction_signature = (
-          tf.saved_model.signature_def_utils.build_signature_def(
-              inputs={'img': tensor_info_x, 'kp': tensor_info_kp},
-              outputs={'pred': tensor_info_pred, 'logits':tensor_info_logits},
-              method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
-
-        builder.add_meta_graph_and_variables(
-          sess, [tf.saved_model.tag_constants.SERVING],
-          signature_def_map={
-            tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
-            prediction_signature 
-          },
-        )
 
         print("Training...")
         print()
@@ -290,6 +271,25 @@ if __name__ == '__main__':
     
         test_accuracy = evaluate(test_imgs, test_labels)
         print("Test Accuracy = {:.3f}".format(test_accuracy))
+        
+        tensor_info_x = tf.saved_model.utils.build_tensor_info(x)
+        tensor_info_kp = tf.saved_model.utils.build_tensor_info(keep_prob)
+        tensor_info_pred = tf.saved_model.utils.build_tensor_info(prediction)
+        tensor_info_logits = tf.saved_model.utils.build_tensor_info(logits)
+
+        prediction_signature = (
+          tf.saved_model.signature_def_utils.build_signature_def(
+              inputs={'img': tensor_info_x, 'kp': tensor_info_kp},
+              outputs={'pred': tensor_info_pred, 'logits':tensor_info_logits},
+              method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
+
+        builder.add_meta_graph_and_variables(
+          sess, [tf.saved_model.tag_constants.SERVING],
+          signature_def_map={
+            tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+            prediction_signature 
+          },
+        )
 
         builder.save()
         print("Model saved")
