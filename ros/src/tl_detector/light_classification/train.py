@@ -49,7 +49,7 @@ print("#unknowns: {}".format(len(unknown_img_paths)))
 from sklearn.model_selection import train_test_split
 train_imgs, test_imgs, train_labels, test_labels = train_test_split(imgs, labels, test_size = 0.2)
 
-EPOCHS = 2
+EPOCHS = 20
 BATCH_SIZE = 5
 
 def fire_module(x, num_filters_squeeze):
