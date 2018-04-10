@@ -6,7 +6,10 @@ import cv2
 from tensorflow.contrib.layers import flatten
 import time
 import math
+from read_label_file import get_all_labels
+from tqdm import tqdm
 
+# Define the simulator training image path
 training_file = '../../../../trainingimages/'
 
 red_img_paths = glob.glob(training_file + '*RED.png')
@@ -24,6 +27,44 @@ labels = [0] * len(red_img_paths) + [1] * len(yellow_img_paths) + [2] * len(gree
 #img_paths = img_paths[1:10]
 #labels = labels[1:10]
 
+# Get the bosch dataset paths and labels
+input_yaml = '../../../../../Boschtrafficsignsdata/train.yaml'
+#print(glob.glob(input_yaml))
+bosch_image_dicts = get_all_labels(input_yaml)
+labeldict = {'Red':0, 'Yellow':1, 'Green':2, 'Unknown':3}
+
+bosch_imgs = []
+bosch_labels = []
+
+for i, image_dict in enumerate(tqdm(bosch_image_dicts)):
+    img_path = image_dict['path']
+    img = cv2.resize(cv2.imread(img_path), (input_width, input_height))
+    bosch_imgs.append(img)
+    boxes = image_dict['boxes']
+    if boxes:
+        img_labels = []
+        for boxinstance in boxes:
+            img_labels.append(boxinstance['label'])
+        if 'Red' in img_labels:
+            bosch_labels.append(labeldict['Red'])
+        elif 'Green' in img_labels:
+            bosch_labels.append(labeldict['Red'])
+        elif 'Yellow' in img_labels:
+            bosch_labels.append(labeldict['Yellow'])
+        else:
+            bosch_labels.append(labeldict['Unknown'])
+    else:
+        bosch_labels.append(labeldict['Unknown'])
+    #if i>1000:
+    #    break
+        
+
+bosch_imgs = np.array(bosch_imgs, dtype=np.float32)
+bosch_labels = np.array(bosch_labels)
+
+# Normalize bosch images
+bosch_imgs = bosch_imgs/255.0
+
 print("UNKNWON label is 3!")
 
 imgs = np.array(map(lambda x: cv2.resize(cv2.imread(x), (input_width, input_height)), img_paths)) #this might take a while, maybe make this faster?
@@ -31,25 +72,32 @@ imgs = np.array(map(lambda x: cv2.resize(cv2.imread(x), (input_width, input_heig
 imgs = np.array(imgs/255.0, dtype=np.float32)
 labels = np.array(labels)
 
+# Combine simulator data and bosch data
+imgs = np.concatenate((imgs, bosch_imgs), axis=0)
+labels = np.concatenate((labels, bosch_labels), axis=0)
+print("......")
+print(labels.shape)
+print(imgs.shape)
+
 imshape = imgs[0].shape
 print(imshape)
 print(imgs.dtype)
 
-print(len(img_paths))
+#print(len(img_paths))
 print(len(imgs))
 print(len(labels))
 print(img_paths[0])
 #print(imgs[0])
 print(labels[0])
-print("#greens: {}".format(len(green_img_paths)))
-print("#reds: {}".format(len(red_img_paths)))
-print("#yellows: {}".format(len(yellow_img_paths)))
-print("#unknowns: {}".format(len(unknown_img_paths)))
+print("#greens: {}".format(np.sum(labels==2)))
+print("#reds: {}".format(np.sum(labels==0)))
+print("#yellows: {}".format(np.sum(labels==1)))
+print("#unknowns: {}".format(np.sum(labels==3)))
 
 from sklearn.model_selection import train_test_split
 train_imgs, test_imgs, train_labels, test_labels = train_test_split(imgs, labels, test_size = 0.2)
 
-EPOCHS = 20
+EPOCHS = 10
 BATCH_SIZE = 5
 
 def fire_module(x, num_filters_squeeze):
