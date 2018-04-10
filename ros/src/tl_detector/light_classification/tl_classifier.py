@@ -53,24 +53,17 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-
+        # Resize the image
         img = np.array(cv2.resize(image, (self.input_width, self.input_height)))
         # Normalize
         img = img/255.0
         
         imshape = img.shape
-
+        # Expand dimensions
         img = np.reshape(img, (1, imshape[0], imshape[1], imshape[2]))
-        #print(img.max())
-        #print(img.min())
-        #print(img.shape)
         
-        #t1 = time.time()
         pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
-        logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
-        
-        print(logits)
-        #print(time.time()-t1)
+        #logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
         
         if (pred == 3):
             pred = 4 # UNKNOWN

@@ -117,14 +117,14 @@ class TLDetector(object):
           Returns:
               int: ID of traffic light color (specified in styx_msgs/TrafficLight)
           """
-          test_state = light.state # testing
+          #test_state = light.state # testing
           if(not self.has_image):
               self.prev_light_loc = None
               return False
           cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
           #Get classification
           pred_state = self.light_classifier.get_classification(cv_image)
-          print("True state:", test_state, "Predicted state:", pred_state) # testing         
+          #print("True state:", test_state, "Predicted state:", pred_state) # testing         
           return pred_state
                 
 

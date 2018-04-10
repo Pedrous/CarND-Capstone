@@ -20,10 +20,6 @@ input_width = 432
 img_paths = red_img_paths + green_img_paths + yellow_img_paths + unknown_img_paths
 labels = [0] * len(red_img_paths) + [1] * len(yellow_img_paths) + [2] * len(green_img_paths) + [3] * len(unknown_img_paths)
 
-# REMOVE!!!
-#img_paths = img_paths[1:10]
-#labels = labels[1:10]
-
 print("UNKNWON label is 3!")
 
 imgs = np.array(map(lambda x: cv2.resize(cv2.imread(x), (input_width, input_height)), img_paths)) #this might take a while, maybe make this faster?
@@ -114,58 +110,6 @@ def tl_clf(x):
     
     return logits
     
-def tl_clf_mod1(x):
-
-    
-    # Arguments used for tf.truncated_normal, randomly defines variables for the weights and biases for each layer
-    mu = 0
-    sigma = 0.1
-
-    conv1_size = 11
-    strides = [1, 1, 1, 1]
-    """
-    # Layer 1: Convolutional. Input = 600x800x3. Output = conv1_out_height x conv1_out_width x 6.
-    conv1_W = tf.Variable(tf.truncated_normal(shape=(conv1_size, conv1_size, 3, 6), mean = mu, stddev = sigma))
-    conv1_b = tf.Variable(tf.zeros(6))
-    conv1   = tf.nn.conv2d(x, conv1_W, strides=strides, padding='VALID') + conv1_b
-
-    conv1_out_height = math.ceil(float(imshape[0] - conv1_size + 1) / float(strides[1]))
-    conv1_out_width = math.ceil(float(imshape[1] - conv1_size + 1) / float(strides[2]))
-
-    # Activation.
-    conv1 = tf.nn.relu(conv1)
-    """
-    
-    conv1 = tf.layers.conv2d(inputs=x, filters=6, kernel_size=[11, 11], strides=1, padding='valid', activation=tf.nn.relu)
-
-    # Pooling. Halves height and width
-    conv1 = tf.nn.avg_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-
-    pool1_out_height = conv1.get_shape()[1] #int(conv1_out_height // 2)
-    pool1_out_width = conv1.get_shape()[2]  #int(conv1_out_width // 2)
-
-    # Flatten. 
-    fc0   = flatten(conv1)
-
-    flatten_size = pool1_out_height * pool1_out_width * 6
-
-    # Layer 3: Fully Connected. Input = flatten_size. Output = 100.
-    fc1_W = tf.Variable(tf.truncated_normal(shape=(flatten_size, 100), mean = mu, stddev = sigma))
-    fc1_b = tf.Variable(tf.zeros(100))
-    fc1   = tf.matmul(fc0, fc1_W) + fc1_b
-
-    # Activation.
-    fc1= tf.nn.relu(fc1)
-
-    # Dropout.
-    fc1 = tf.nn.dropout(fc1, keep_prob)
-
-    # Layer 5: Fully Connected. Input = 100. Output = 4.
-    fc2_W  = tf.Variable(tf.truncated_normal(shape=(100, 4), mean = mu, stddev = sigma))
-    fc2_b  = tf.Variable(tf.zeros(4))
-    logits = tf.matmul(fc1, fc2_W) + fc2_b
-    
-    return logits
 
 def tl_clf_mod2(x):
     # Architecture which has a lot in common with the SqueezeNet
@@ -198,16 +142,13 @@ def tl_clf_mod2(x):
     #print(conv_last.get_shape())
     
     # Global average pool
-    #global_ave_pool8 = tf.reduce_mean(conv_last, [1,2]) # dim = (None, 1, 1, 4)?
     global_ave_pool8 = tf.nn.avg_pool(conv_last, ksize=[1, 20, 27, 1], strides=[1, 1, 1, 1], padding='VALID')
-    #print(global_ave_pool8.get_shape())
     
     logits = tf.squeeze(global_ave_pool8, [1, 2])
     # Perhaps add also some batch normalization layers?
     # x = tf.contrib.layers.batch_norm(x)
     
     return logits
-    #return global_ave_pool8
 
 
 x = tf.placeholder(tf.float32, (None, imshape[0], imshape[1], 3), name="img")
