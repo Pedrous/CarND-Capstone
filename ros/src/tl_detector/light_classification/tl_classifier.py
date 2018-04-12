@@ -7,6 +7,23 @@ import os
 import time
 from tl_ssd import TLCBBox
 
+def to_image_coords(boxes, height, width):
+    """
+    The original box coordinate output is normalized, i.e [0, 1].
+    
+    This converts it back to the original coordinate based on the image
+    size.
+    """
+    box_coords = np.zeros_like(boxes)
+    box_coords[0] = boxes[0] * height
+    box_coords[1] = boxes[1] * width
+    box_coords[2] = boxes[2] * height
+    box_coords[3] = boxes[3] * width
+    
+    return box_coords
+
+
+
 class TLClassifier(object):
     def __init__(self):
         #TODO load classifier
@@ -58,8 +75,21 @@ class TLClassifier(object):
         
         # Get the bounding box
         boxes, scores, classes = self.light_boundingboxer.get_boundingbox(image)
-        print classes
-        """
+        #print scores
+        try:
+            max_score_idx = np.argmax(scores)
+            # The current box coordinates are normalized to a range between 0 and 1.
+            # This converts the coordinates actual location on the image.
+            height, width, _ = image.shape
+            box_coords = to_image_coords(boxes[max_score_idx], height, width)
+            box_coords = np.floor(box_coords).astype(int)
+            print(box_coords)
+            
+        except ValueError:
+            return 4 # UNKNOWN, no traffic lights in sight
+        
+        # TODO: Get the bounding box with the highest score, resize to classification net input size, normalize, feed to classification net
+        
         img = np.array(cv2.resize(image, (self.input_width, self.input_height)))
         # Normalize
         img = img/255.0
@@ -73,16 +103,18 @@ class TLClassifier(object):
         
         #t1 = time.time()
         pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
-        logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
+        #logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
         
-        print(logits)
+        #print(logits)
         #print(time.time()-t1)
         
         if (pred == 3):
             pred = 4 # UNKNOWN
         
         return pred
-        """
-        return 4
+        
+        
+        
+        
         
         
