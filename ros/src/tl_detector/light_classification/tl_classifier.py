@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import os
 import time
+from tl_ssd import TLCBBox
 
 class TLClassifier(object):
     def __init__(self):
@@ -41,6 +42,7 @@ class TLClassifier(object):
         self.pred = self.sess.graph.get_tensor_by_name(pred_tensor_name)
         self.logits = self.sess.graph.get_tensor_by_name(logits_tensor_name)
         
+        self.light_boundingboxer = TLCBBox()
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -53,7 +55,11 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-
+        
+        # Get the bounding box
+        boxes, scores, classes = self.light_boundingboxer.get_boundingbox(image)
+        print classes
+        """
         img = np.array(cv2.resize(image, (self.input_width, self.input_height)))
         # Normalize
         img = img/255.0
@@ -76,3 +82,7 @@ class TLClassifier(object):
             pred = 4 # UNKNOWN
         
         return pred
+        """
+        return 4
+        
+        

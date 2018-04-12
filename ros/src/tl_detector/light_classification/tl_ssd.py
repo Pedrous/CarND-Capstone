@@ -6,19 +6,19 @@ import os
 import time
 
 # Colors (one for each class)
-cmap = ImageColor.colormap
-COLOR_LIST = sorted([c for c in cmap.keys()])
+#cmap = ImageColor.colormap
+#COLOR_LIST = sorted([c for c in cmap.keys()])
 
 #
 # Utility funcs
 #
 
-def filter_boxes(min_score, boxes, scores, classes):
-    """Return boxes with a confidence >= `min_score`"""
+def filter_boxes(class_filt, min_score, boxes, scores, classes):
+    """Return boxes with a confidence >= `min_score` belonging to class class_filt"""
     n = len(classes)
     idxs = []
     for i in range(n):
-        if scores[i] >= min_score:
+        if scores[i] >= min_score and classes[i] == class_filt:
             idxs.append(i)
     
     filtered_boxes = boxes[idxs, ...]
@@ -40,15 +40,16 @@ def to_image_coords(boxes, height, width):
     box_coords[:, 3] = boxes[:, 3] * width
     
     return box_coords
-
+"""
 def draw_boxes(image, boxes, classes, thickness=4):
-    """Draw bounding boxes on the image"""
+    #Draw bounding boxes on the image
     draw = ImageDraw.Draw(image)
     for i in range(len(boxes)):
         bot, left, top, right = boxes[i, ...]
         class_id = int(classes[i])
         color = COLOR_LIST[class_id]
         draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
+"""
         
 def load_graph(graph_file):
     """Loads a frozen inference graph"""
@@ -81,17 +82,17 @@ class TLCBBox(object):
 
         # The input placeholder for the image.
         # `get_tensor_by_name` returns the Tensor with the associated name in the Graph.
-        self.image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
+        self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
 
         # Each box represents a part of the image where a particular object was detected.
-        self.detection_boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
+        self.detection_boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
 
         # Each score represent how level of confidence for each of the objects.
         # Score is shown on the result image, together with the class label.
-        self.detection_scores = detection_graph.get_tensor_by_name('detection_scores:0')
+        self.detection_scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
 
         # The classification of the object (integer id).
-        self.detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
+        self.detection_classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
         
         self.sess = tf.Session(config=self.config, graph=self.detection_graph)
     
@@ -122,23 +123,21 @@ class TLCBBox(object):
         scores = np.squeeze(scores)
         classes = np.squeeze(classes)
         
-        confidence_cutoff = 0.6
+        confidence_cutoff = 0.1
+        traffic_light_class = 10
         # Filter boxes with a confidence score less than 'confidence_cutoff'
-        boxes, scores, classes = filter_boxes(confidence_cutoff, boxes, scores, classes)
+        boxes, scores, classes = filter_boxes(traffic_light_class, confidence_cutoff, boxes, scores, classes)
         
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
-        width, height = draw_img.size
-        box_coords = to_image_coords(boxes, height, width)
+        #height, width = image.shape
+        #width, height = draw_img.size
+        #box_coords = to_image_coords(boxes, height, width)
         
-        #t1 = time.time()
-        pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
-        logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
+        return (boxes, scores, classes)
         
-        print(logits)
-        #print(time.time()-t1)
         
-        if (pred == 3):
-            pred = 4 # UNKNOWN
         
-        return pred
+        
+        
+        
