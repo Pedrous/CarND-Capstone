@@ -124,7 +124,7 @@ class TLDetector(object):
           cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
           #Get classification
           pred_state = self.light_classifier.get_classification(cv_image)
-          #print("True state:", test_state, "Predicted state:", pred_state) # testing         
+          print("True state:", test_state, "Predicted state:", pred_state) # testing         
           return pred_state
                 
 

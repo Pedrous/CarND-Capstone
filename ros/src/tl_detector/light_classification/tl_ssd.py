@@ -68,8 +68,6 @@ def load_graph(graph_file):
 class TLCBBox(object):
     def __init__(self):
         #TODO load classifier
-        self.input_height = 320
-        self.input_width = 432
         
         self.config = tf.ConfigProto()
         self.config.gpu_options.allow_growth = True

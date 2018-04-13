@@ -22,13 +22,25 @@ def to_image_coords(boxes, height, width):
     
     return box_coords
 
+def get_bbox_patch(image, x_max, x_min, y_max, y_min, patch_height, patch_width):
+    """
+    Returns a resized image patch inside the bounding box coordinates.
+    """
+    # Make sure the x_min and y_min stay positive (there are a couple of negative coordinates in the dataset)
+    x_min = max(x_min,0)
+    y_min = max(y_min,0)
+    patch = np.array(image[y_min:y_max+1, x_min:x_max+1, :], dtype=np.float32)
+    #print(y_min, y_max, x_min, x_max)
+    #print(patch.shape)
+    patch = cv2.resize(patch, (patch_width, patch_height))
+    return patch
 
 
 class TLClassifier(object):
     def __init__(self):
         #TODO load classifier
-        self.input_height = 320
-        self.input_width = 432
+        self.input_height = 32
+        self.input_width = 32
         
         self.config = tf.ConfigProto()
         self.config.gpu_options.allow_growth = True
@@ -82,27 +94,31 @@ class TLClassifier(object):
             # This converts the coordinates actual location on the image.
             height, width, _ = image.shape
             box_coords = to_image_coords(boxes[max_score_idx], height, width)
-            box_coords = np.floor(box_coords).astype(int)
-            print(box_coords)
+            box_coords = np.floor(box_coords).astype(int) # Convention bot, left, top, right = boxes[i, ...]
+            #print(box_coords)
+            bot, left, top, right = box_coords
+            
+            patch = get_bbox_patch(image, right, left, top, bot, self.input_height, self.input_width)
+            patch = patch/255.0 # Normalize
+            
+            img = np.expand_dims(patch, axis=0)
+            
+            pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
             
         except ValueError:
             return 4 # UNKNOWN, no traffic lights in sight
         
         # TODO: Get the bounding box with the highest score, resize to classification net input size, normalize, feed to classification net
         
-        img = np.array(cv2.resize(image, (self.input_width, self.input_height)))
-        # Normalize
-        img = img/255.0
-        
-        imshape = img.shape
+        #imshape = img.shape
 
-        img = np.reshape(img, (1, imshape[0], imshape[1], imshape[2]))
+        #img = np.reshape(img, (1, imshape[0], imshape[1], imshape[2]))
         #print(img.max())
         #print(img.min())
         #print(img.shape)
         
         #t1 = time.time()
-        pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
+        #pred = self.sess.run(self.pred, feed_dict = {self.img: img, self.keep_prob: 1.0})[0]
         #logits = self.sess.run(self.logits, feed_dict = {self.img: img, self.keep_prob: 1.0})
         
         #print(logits)
