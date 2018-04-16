@@ -6,46 +6,109 @@ import cv2
 from tensorflow.contrib.layers import flatten
 import time
 import math
+from read_label_file import get_all_labels
+from tqdm import tqdm
 
-training_file = '../../../../trainingimages/'
+def get_random_image_patch(image, patch_height, patch_width):
+    """
+    Returns a randomly selected patch from the image.
+    Patch shape: (patch_height, patch_width, number of channels in the original image)
+    """
+    h, w, c = image.shape
+    h_max = h - patch_height
+    w_max = w - patch_height
+    
+    h_top = np.random.randint(h_max)
+    w_left = np.random.randint(w_max)
+    
+    h_bottom = h_top + patch_height
+    w_right = w_left + patch_width
+    
+    patch = image[h_top:h_bottom, w_left:w_right, :]
+    return patch
+    
+def get_bbox_patch(image, x_max, x_min, y_max, y_min, patch_height, patch_width):
+    """
+    Returns a resized image patch inside the bounding box coordinates.
+    """
+    # Make sure the x_min and y_min stay positive (there are a couple of negative coordinates in the dataset)
+    x_min = max(x_min,0)
+    y_min = max(y_min,0)
+    patch = np.array(image[y_min:y_max+1, x_min:x_max+1, :], dtype=np.float32)
+    #print(y_min, y_max, x_min, x_max)
+    #print(patch.shape)
+    patch = cv2.resize(patch, (patch_width, patch_height))
+    return patch
 
-red_img_paths = glob.glob(training_file + '*RED.png')
-green_img_paths = glob.glob(training_file + '*GREEN.png')
-yellow_img_paths = glob.glob(training_file + '*YELLOW.png')
-unknown_img_paths = glob.glob(training_file + '*UNKNOWN.png')
 
-input_height = 320
-input_width = 432
+input_height = 32
+input_width = 32
 
-img_paths = red_img_paths + green_img_paths + yellow_img_paths + unknown_img_paths
-labels = [0] * len(red_img_paths) + [1] * len(yellow_img_paths) + [2] * len(green_img_paths) + [3] * len(unknown_img_paths)
+# Get the bosch dataset paths and labels
+input_yaml = '../../../../../Boschtrafficsignsdata/train.yaml'
+
+bosch_image_dicts = get_all_labels(input_yaml)
+labeldict = {'Red':0, 'Yellow':1, 'Green':2, 'Unknown':3}
+
+bosch_imgs = []
+bosch_labels = []
+
+for i, image_dict in enumerate(tqdm(bosch_image_dicts)):
+    img_path = image_dict['path']
+    img = cv2.imread(img_path)
+    boxes = image_dict['boxes']
+    if boxes:
+        for boxinstance in boxes:
+            label = boxinstance['label']
+            if label in ["Red", "Green", "Yellow"]:
+                x_max = int(np.ceil(boxinstance['x_max']))
+                x_min = int(np.floor(boxinstance['x_min']))
+                y_max = int(np.ceil(boxinstance['y_max']))
+                y_min = int(np.floor(boxinstance['y_min']))
+                patch = get_bbox_patch(img, x_max, x_min, y_max, y_min, input_height, input_width)
+                bosch_imgs.append(patch)
+                bosch_labels.append(labeldict[label])
+    else:
+        patch = get_random_image_patch(img, input_height, input_width)
+        bosch_imgs.append(patch)
+        bosch_labels.append(labeldict['Unknown'])
+        
+
+bosch_imgs = np.array(bosch_imgs, dtype=np.float32)
+bosch_labels = np.array(bosch_labels)
+print(bosch_imgs.shape)
+
+# Normalize bosch images
+bosch_imgs = bosch_imgs/255.0
 
 print("UNKNWON label is 3!")
 
-imgs = np.array(map(lambda x: cv2.resize(cv2.imread(x), (input_width, input_height)), img_paths)) #this might take a while, maybe make this faster?
-# Normalize
-imgs = np.array(imgs/255.0, dtype=np.float32)
-labels = np.array(labels)
+imgs = bosch_imgs
+labels = bosch_labels
+
+print("......")
+print(labels.shape)
+print(imgs.shape)
 
 imshape = imgs[0].shape
 print(imshape)
 print(imgs.dtype)
 
-print(len(img_paths))
+#print(len(img_paths))
 print(len(imgs))
 print(len(labels))
-print(img_paths[0])
+#print(img_paths[0])
 #print(imgs[0])
 print(labels[0])
-print("#greens: {}".format(len(green_img_paths)))
-print("#reds: {}".format(len(red_img_paths)))
-print("#yellows: {}".format(len(yellow_img_paths)))
-print("#unknowns: {}".format(len(unknown_img_paths)))
+print("#greens: {}".format(np.sum(labels==2)))
+print("#reds: {}".format(np.sum(labels==0)))
+print("#yellows: {}".format(np.sum(labels==1)))
+print("#unknowns: {}".format(np.sum(labels==3)))
 
 from sklearn.model_selection import train_test_split
 train_imgs, test_imgs, train_labels, test_labels = train_test_split(imgs, labels, test_size = 0.2)
 
-EPOCHS = 20
+EPOCHS = 10
 BATCH_SIZE = 5
 
 def fire_module(x, num_filters_squeeze):
@@ -117,9 +180,9 @@ def tl_clf_mod2(x):
     
     conv1 = tf.layers.conv2d(inputs=x, filters=64, kernel_size=[3, 3], strides=2, padding='same', activation=tf.nn.relu)
     
-    maxpool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[3, 3], strides=2, padding='same')
+    #maxpool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[3, 3], strides=2, padding='same')
     
-    fire2 = fire_module(maxpool1, 16)
+    fire2 = fire_module(conv1, 16)
     
     fire3 = fire_module(fire2, 16)
     
@@ -142,7 +205,10 @@ def tl_clf_mod2(x):
     #print(conv_last.get_shape())
     
     # Global average pool
-    global_ave_pool8 = tf.nn.avg_pool(conv_last, ksize=[1, 20, 27, 1], strides=[1, 1, 1, 1], padding='VALID')
+    #global_ave_pool8 = tf.reduce_mean(conv_last, [1,2]) # dim = (None, 1, 1, 4)?
+    #global_ave_pool8 = tf.nn.avg_pool(conv_last, ksize=[1, 20, 27, 1], strides=[1, 1, 1, 1], padding='VALID')
+    global_ave_pool8 = tf.nn.avg_pool(conv_last, ksize=[1, 4, 4, 1], strides=[1, 1, 1, 1], padding='VALID')
+    #print(global_ave_pool8.get_shape())
     
     logits = tf.squeeze(global_ave_pool8, [1, 2])
     # Perhaps add also some batch normalization layers?
